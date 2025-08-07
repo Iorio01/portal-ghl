@@ -1,43 +1,89 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Agent App Launcher</title>
+  <meta charset="UTF-8">
+  <title>🚀 Agent App Launcher</title>
   <style>
-    .app-icon {
-      display: inline-block;
-      margin: 20px;
+    body {
+      font-family: Arial, sans-serif;
       text-align: center;
+      background: #f4f4f4;
+      padding: 40px;
     }
-    .app-icon img {
-      width: 100px;
-      height: 100px;
+
+    h1 {
+      font-size: 2em;
+      margin-bottom: 30px;
+    }
+
+    .app-grid {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 30px;
+    }
+
+    .app-icon {
+      width: 120px;
+      height: 120px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      text-decoration: none;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      font-size: 24px;
+      transition: transform 0.2s;
+    }
+
+    .app-icon:hover {
+      transform: scale(1.05);
+    }
+
+    .app-icon span {
+      font-size: 40px;
+      margin-bottom: 10px;
     }
   </style>
 </head>
 <body>
-  <h1>Welcome to Your Portal</h1>
 
-  <div class="app-icon">
-    <a href="https://app.gohighlevel.com/login?location=..." target="_blank">
-      <img src="ghl-logo.png" alt="GHL"><br>
-      GoHighLevel
+  <h1>🚀 Welcome to Your Portal</h1>
+
+  <div class="app-grid">
+    <a class="app-icon" href="https://www.youtube.com" target="_blank">
+      <span>📺</span>
+      YouTube
+    </a>
+
+    <a class="app-icon" href="https://www.google.com" target="_blank">
+      <span>🔍</span>
+      Google
+    </a>
+
+    <a class="app-icon" href="https://mail.google.com" target="_blank">
+      <span>📧</span>
+      Gmail
+    </a>
+
+    <a class="app-icon" href="https://www.linkedin.com" target="_blank">
+      <span>💼</span>
+      LinkedIn
+    </a>
+
+    <a class="app-icon" href="https://chat.openai.com" target="_blank">
+      <span>🤖</span>
+      ChatGPT
+    </a>
+
+    <a class="app-icon" href="https://calendar.google.com" target="_blank">
+      <span>📆</span>
+      Calendar
     </a>
   </div>
 
-  <div class="app-icon">
-    <a href="https://partner.securian.com/login" target="_blank">
-      <img src="securian-logo.png" alt="Securian"><br>
-      Securian
-    </a>
-  </div>
-
-  <div class="app-icon">
-    <a href="https://www.foresters.com/login" target="_blank">
-      <img src="foresters-logo.png" alt="Foresters"><br>
-      Foresters
-    </a>
-  </div>
-
-  <!-- Add more as needed -->
 </body>
 </html>
