@@ -33,19 +33,35 @@
       color: #333;
       display: flex;
       flex-direction: column;
-      justify-content: center;
       align-items: center;
-      font-size: 24px;
       transition: transform 0.2s;
+      padding: 8px;
+      text-align: center;
+      position: relative; /* allows label to be fixed at bottom */
     }
 
     .app-icon:hover {
       transform: scale(1.05);
     }
 
-    .app-icon span {
-      font-size: 40px;
-      margin-bottom: 10px;
+    /* Image stays centered in available space above the label */
+    .app-icon img {
+      max-width: 80%;
+      max-height: calc(100% - 28px); /* leaves space for label */
+      object-fit: contain;
+      margin-top: auto;
+      margin-bottom: auto;
+    }
+
+    /* Label always at bottom */
+    .app-icon .label {
+      font-size: 12px;
+      line-height: 1.2;
+      position: absolute;
+      bottom: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: calc(100% - 16px); /* matches padding */
     }
   </style>
 </head>
@@ -54,35 +70,117 @@
   <h1>🚀 Welcome to Your Portal</h1>
 
   <div class="app-grid">
-    <a class="app-icon" href="https://www.youtube.com" target="_blank">
-      <span>📺</span>
-      YouTube
+    
+    <a class="app-icon" href="https://service.ameritas.com/service/login.asp" target="_blank">
+      <img src="https://webcontent.ameritas.com/idc/groups/public/documents/image/ameritas_bison_color200x51.png" alt="Ameritas">
+      Ameritas
     </a>
 
-    <a class="app-icon" href="https://www.google.com" target="_blank">
-      <span>🔍</span>
-      Google
+    <a class="app-icon" href="https://lad.americannational.com/" target="_blank">
+      <img src="https://lad.americannational.com/content/dam/lad/an-logos/AN_Logo_Stacked_2color.svg" alt="American National">
+      American National
     </a>
 
-    <a class="app-icon" href="https://mail.google.com" target="_blank">
-      <span>📧</span>
-      Gmail
+    <a class="app-icon" href="https://www.connext.corebridgefinancial.com/life/connext-security/public/login" target="_blank">
+      <img src="https://binaries.corebridgefinancial.com/content/dam/acs/america-canada/us_lifeconnext-portal/en/images/corebridge_financial.png" alt="Corebridge">
+      Corebridge
     </a>
 
-    <a class="app-icon" href="https://www.linkedin.com" target="_blank">
-      <span>💼</span>
-      LinkedIn
+    <a class="app-icon" href="https://saleslink.fglife.com/login/portallogin" target="_blank">
+      <img src="https://www.fglife.com/images/F&G_Logo.svg" alt="Fidelity & Guaranty">
+      Fidelity & Guaranty
     </a>
 
-    <a class="app-icon" href="https://chat.openai.com" target="_blank">
-      <span>🤖</span>
-      ChatGPT
+    <a class="app-icon" href="https://ezbiz.foresters.com/" target="_blank">
+      <img src="https://ezbiz.foresters.com/-/media/ezbiz/images/logos/ezbiz-logo.svg?la=en&hash=2BCA42891AE3D018D9B11D2D689B872E" alt="Foresters Financial">
+      Foresters Financial
     </a>
 
-    <a class="app-icon" href="https://calendar.google.com" target="_blank">
-      <span>📆</span>
-      Calendar
+    <a class="app-icon" href="https://www.globalatlanticlink.com/AgentWeb/" target="_blank">
+      <img src="https://www.globalatlanticlink.com/AgentWeb/javax.faces.resource/Rebranding_GAFG_white_logo.png.jsf?ln=images" alt="Global Atlantic">
+      Global Atlantic
     </a>
+
+    <a class="app-icon" href="https://partnerlink.jhancock.com/" target="_blank">
+      <img src="https://www.johnhancock.com/content/dam/onejohnhancock/images/homepage/JohnHancock_rgb.svg" alt="John Hancock">
+      John Hancock
+    </a>
+
+    <a class="app-icon" href="https://auth.lincolnfinancial.com/login" target="_blank">
+      <img src="https://idm.web.lfg.com/idm-login/assets/images/lfg-logo.svg" alt="Lincoln Financial">
+      Lincoln Financial
+    </a>
+
+    <a class="app-icon" href="https://accounts.mutualofomaha.com/" target="_blank">
+      <img src="https://cdn.mutualofomaha.com/images/corporate/pixel.png" alt="Mutual of Omaha">
+      Mutual of Omaha
+    </a>
+
+    <a class="app-icon" href="https://www.nationallife.com/" target="_blank">
+      <img src="https://www.nationallife.com/-/media/Images/NationalLife/public/home-page/home-feature/NLG-logo.jpeg" alt="National Life Group">
+      National Life Group
+    </a>
+
+    <a class="app-icon" href="https://nationwidefinancial.com/" target="_blank">
+      <img src="https://nationwidefinancial.com/media/images/ssc/header-logo.svg" alt="Nationwide">
+      Nationwide
+    </a>
+
+    <a class="app-icon" href="https://www.newyorklife.com/amn/retail-life/secure" target="_blank">
+      <img src="https://assets.newyorklife.com/is/content/newyorklife/nyl-logo-1" alt="New York Life">
+      New York Life
+    </a>
+
+    <a class="app-icon" href="https://www.northamericancompany.com/" target="_blank">
+      <img src="https://www.northamericancompany.com/image/layout_set_logo?img_id=1417326116&t=1754683708494" alt="North America">
+      North America
+    </a>
+
+    <a class="app-icon" href="https://login.oneamerica.com/login" target="_blank">
+      <img src="https://www.oneamerica.com/content/dam/connectedassets/design-elements/logosgraphicsicons/OneAmerica_r_rgb.svg" alt="OneAmerica">
+      OneAmerica
+    </a>
+
+    <a class="app-icon" href="https://www.advisors.principal.com" target="_blank">
+      <img src="https://www.oneamerica.com/content/dam/connectedassets/design-elements/logosgraphicsicons/OneAmerica_r_rgb.svg" alt="Principal">
+      Principal
+    </a>
+
+    <a class="app-icon" href="https://www.myprotective.com" target="_blank">
+      <img src="https://apps.cdn.protective.com/b2c/AzureBlue/bannerlogo.png" alt="Protective">
+      Protective
+    </a>
+
+    <a class="app-icon" href="https://ssoauth.prudential.com/app/pxblife/login?ou=PXB&client_id=pxb-life-public-app&goto=https://prudentialexpresslife.prudential.com/home" target="_blank">
+      <img src="https://ssoauth.prudential.com/static/media/PruXpress_Logo.30c438e667ca95d3c049.png" alt="Prudential">
+      Prudential
+    </a>
+
+    <a class="app-icon" href="https://client.sagicor.com/#/login" target="_blank">
+      <img src="https://client.sagicor.com/assets/images/logoLoginUSA.png" alt="Sagicor">
+      Sagicor
+    </a>
+
+    <a class="app-icon" href="https://advisor.securian.com/userservices/public/idg/login" target="_blank">
+      <img src="https://assetlibrary.securian.com/content/dam/securian/web-assets/brand/sf-logo-rgb-bk-wordmark.svg" alt="Securian / Minnesota">
+      Securian / Minnesota
+    </a>
+
+    <a class="app-icon" href="https://sso.symetra.com/nidp/app/login?id=commonlogin&sid=0&option=credential&sid=0" target="_blank">
+      <img src="https://sso.symetra.com/nidp/custom_images/navlogo.svg" alt="Symetra">
+      Symetra
+    </a>
+
+    <a class="app-icon" href="https://secure.transamerica.com/login/sign-in/login.html" target="_blank">
+      <img src="https://secure.transamerica.com/login/assets/images/ta-logo_primary_medium%201.jpg" alt="TransAmerica">
+      TransAmerica
+    </a>
+
+    <a class="app-icon" href="https://login.zurichna.com/app/global_redirect/0oa16bc8jjxFu2t26358/login" target="_blank">
+      <img src="https://ok7static.oktacdn.com/fs/bco/1/fs0tffzjnboXj8QXk357" alt="TransAmerica">
+      Zurich
+    </a>
+    
   </div>
 
 </body>
