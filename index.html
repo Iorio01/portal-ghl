@@ -1,187 +1,399 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>🚀 Agent App Launcher</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      background: #f4f4f4;
-      padding: 40px;
+    :root { --gap: 18px; --card-w: 120px; --radius: 12px; }
+
+    body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 24px; margin: 0; }
+
+    header { text-align: center; margin-bottom: 14px; }
+    h1 { font-size: 1.8em; margin: 0 0 6px; }
+    .subhead { color:#666; margin: 0; font-size:14px; }
+
+    .toolbar { display:flex; gap:10px; justify-content:center; align-items:center; margin: 18px 0; }
+    .toolbar button {
+      border: none; padding: 10px 14px; border-radius: 10px; background: #111; color:#fff; cursor:pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .toolbar button.secondary { background:#fff; color:#111; border:1px solid #ddd; }
+
+    /* Full-width groups stacked vertically */
+    .groups { display: flex; flex-direction: column; gap: 10px; align-items: stretch; width: 100%; }
+    .group {
+      background:#fff; border-radius: 16px; padding: 12px 12px 16px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06); position: relative;
     }
 
-    h1 {
-      font-size: 2em;
-      margin-bottom: 30px;
+    .group-header {
+      display:flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
+      padding: 4px 6px; cursor: default;
     }
+    .group-title { font-weight: 700; display:flex; align-items:center; gap:8px; user-select:none; }
+    .caret {
+      display:inline-block; width: 0; height: 0;
+      border-left: 6px solid transparent; border-right: 6px solid transparent;
+      border-top: 8px solid #333; transition: transform .15s ease;
+    }
+    .collapsed .caret { transform: rotate(-90deg); }
+
+    .group-actions { display:flex; gap:8px; }
+    .group-actions button {
+      border:none; padding:6px 10px; border-radius: 8px; background:#f4f4f4; cursor:pointer; font-size:12px;
+    }
+    .group-actions .danger { color:#b00020; }
 
     .app-grid {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 30px;
+      display: flex; flex-wrap: wrap; gap: var(--gap);
+      min-height: calc(var(--card-w) + 16px);
+      padding: 10px; border: 1px dashed transparent; border-radius: 14px;
+      transition: border-color .15s ease, max-height .2s ease;
+      overflow: hidden; justify-content: flex-start;
+    }
+    .drop-target { border-color: #9ec5ff; background: #f7fbff; }
+    .collapsed .app-grid {
+      max-height: 0; padding-top: 0; padding-bottom: 0; margin-bottom: 0;
+      border-color: transparent !important; min-height: 0;
     }
 
     .app-icon {
-      width: 120px;
-      height: 120px;
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      text-decoration: none;
-      color: #333;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      transition: transform 0.2s;
-      padding: 8px;
-      text-align: center;
-      position: relative; /* allows label to be fixed at bottom */
+      width: var(--card-w); height: var(--card-w); background: white; border-radius: var(--radius);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-decoration: none; color: #333;
+      display: flex; flex-direction: column; align-items: center; transition: transform 0.2s;
+      padding: 8px; text-align: center; position: relative; user-select: none;
+      outline: none;
     }
+    .app-icon:hover { transform: scale(1.05); }
+    .app-icon:focus-visible { box-shadow: 0 0 0 3px rgba(0,120,212,.35); }
 
-    .app-icon:hover {
-      transform: scale(1.05);
-    }
-
-    /* Image stays centered in available space above the label */
     .app-icon img {
-      max-width: 80%;
-      max-height: calc(100% - 28px); /* leaves space for label */
-      object-fit: contain;
-      margin-top: auto;
-      margin-bottom: auto;
+      max-width: 80%; max-height: calc(100% - 28px); object-fit: contain;
+      margin-top: auto; margin-bottom: auto; pointer-events: none;
+    }
+    .app-icon .label {
+      font-size: 12px; line-height: 1.2; position: absolute; bottom: 8px; left: 50%;
+      transform: translateX(-50%); width: calc(100% - 16px); pointer-events: none; text-align: center;
     }
 
-    /* Label always at bottom */
-    .app-icon .label {
-      font-size: 12px;
-      line-height: 1.2;
-      position: absolute;
-      bottom: 8px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: calc(100% - 16px); /* matches padding */
+    .edit-badge { position:absolute; top:6px; right:6px; background:#111; color:#fff; font-size:10px; padding:2px 6px; border-radius:999px; display:none; }
+    .editing .edit-badge { display:block; }
+    .editing .app-icon { cursor: grab; }
+    .dragging-app { opacity: .6; transform: scale(.98) !important; }
+
+    /* Remove (unassign) chip shown only in edit mode on custom groups */
+    .remove-btn {
+      position:absolute; top:6px; left:6px; font-size:11px; line-height:1;
+      padding:4px 6px; border-radius:999px; background:#ffe8e8; color:#b00020;
+      border:1px solid #f6caca; display:none; cursor:pointer; user-select:none;
     }
+    .editing .app-icon .remove-btn.show { display:inline-block; }
   </style>
 </head>
 <body>
+  <header>
+    <h1>🚀 Welcome to Your Portal</h1>
+  </header>
 
-  <h1>🚀 Welcome to Your Portal</h1>
-
-  <div class="app-grid">
-    
-    <a class="app-icon" href="https://service.ameritas.com/service/login.asp" target="_blank">
-      <img src="https://webcontent.ameritas.com/idc/groups/public/documents/image/ameritas_bison_color200x51.png" alt="Ameritas">
-      Ameritas
-    </a>
-
-    <a class="app-icon" href="https://lad.americannational.com/" target="_blank">
-      <img src="https://lad.americannational.com/content/dam/lad/an-logos/AN_Logo_Stacked_2color.svg" alt="American National">
-      American National
-    </a>
-
-    <a class="app-icon" href="https://www.connext.corebridgefinancial.com/life/connext-security/public/login" target="_blank">
-      <img src="https://binaries.corebridgefinancial.com/content/dam/acs/america-canada/us_lifeconnext-portal/en/images/corebridge_financial.png" alt="Corebridge">
-      Corebridge
-    </a>
-
-    <a class="app-icon" href="https://saleslink.fglife.com/login/portallogin" target="_blank">
-      <img src="https://www.fglife.com/images/F&G_Logo.svg" alt="Fidelity & Guaranty">
-      Fidelity & Guaranty
-    </a>
-
-    <a class="app-icon" href="https://ezbiz.foresters.com/" target="_blank">
-      <img src="https://ezbiz.foresters.com/-/media/ezbiz/images/logos/ezbiz-logo.svg?la=en&hash=2BCA42891AE3D018D9B11D2D689B872E" alt="Foresters Financial">
-      Foresters Financial
-    </a>
-
-    <a class="app-icon" href="https://www.globalatlanticlink.com/AgentWeb/" target="_blank">
-      <img src="https://www.globalatlanticlink.com/AgentWeb/javax.faces.resource/Rebranding_GAFG_white_logo.png.jsf?ln=images" alt="Global Atlantic">
-      Global Atlantic
-    </a>
-
-    <a class="app-icon" href="https://partnerlink.jhancock.com/" target="_blank">
-      <img src="https://www.johnhancock.com/content/dam/onejohnhancock/images/homepage/JohnHancock_rgb.svg" alt="John Hancock">
-      John Hancock
-    </a>
-
-    <a class="app-icon" href="https://auth.lincolnfinancial.com/login" target="_blank">
-      <img src="https://idm.web.lfg.com/idm-login/assets/images/lfg-logo.svg" alt="Lincoln Financial">
-      Lincoln Financial
-    </a>
-
-    <a class="app-icon" href="https://accounts.mutualofomaha.com/" target="_blank">
-      <img src="https://cdn.mutualofomaha.com/images/corporate/pixel.png" alt="Mutual of Omaha">
-      Mutual of Omaha
-    </a>
-
-    <a class="app-icon" href="https://www.nationallife.com/" target="_blank">
-      <img src="https://www.nationallife.com/-/media/Images/NationalLife/public/home-page/home-feature/NLG-logo.jpeg" alt="National Life Group">
-      National Life Group
-    </a>
-
-    <a class="app-icon" href="https://nationwidefinancial.com/" target="_blank">
-      <img src="https://nationwidefinancial.com/media/images/ssc/header-logo.svg" alt="Nationwide">
-      Nationwide
-    </a>
-
-    <a class="app-icon" href="https://www.newyorklife.com/amn/retail-life/secure" target="_blank">
-      <img src="https://assets.newyorklife.com/is/content/newyorklife/nyl-logo-1" alt="New York Life">
-      New York Life
-    </a>
-
-    <a class="app-icon" href="https://www.northamericancompany.com/" target="_blank">
-      <img src="https://www.northamericancompany.com/image/layout_set_logo?img_id=1417326116&t=1754683708494" alt="North America">
-      North America
-    </a>
-
-    <a class="app-icon" href="https://login.oneamerica.com/login" target="_blank">
-      <img src="https://www.oneamerica.com/content/dam/connectedassets/design-elements/logosgraphicsicons/OneAmerica_r_rgb.svg" alt="OneAmerica">
-      OneAmerica
-    </a>
-
-    <a class="app-icon" href="https://www.advisors.principal.com" target="_blank">
-      <img src="https://www.oneamerica.com/content/dam/connectedassets/design-elements/logosgraphicsicons/OneAmerica_r_rgb.svg" alt="Principal">
-      Principal
-    </a>
-
-    <a class="app-icon" href="https://www.myprotective.com" target="_blank">
-      <img src="https://apps.cdn.protective.com/b2c/AzureBlue/bannerlogo.png" alt="Protective">
-      Protective
-    </a>
-
-    <a class="app-icon" href="https://ssoauth.prudential.com/app/pxblife/login?ou=PXB&client_id=pxb-life-public-app&goto=https://prudentialexpresslife.prudential.com/home" target="_blank">
-      <img src="https://ssoauth.prudential.com/static/media/PruXpress_Logo.30c438e667ca95d3c049.png" alt="Prudential">
-      Prudential
-    </a>
-
-    <a class="app-icon" href="https://client.sagicor.com/#/login" target="_blank">
-      <img src="https://client.sagicor.com/assets/images/logoLoginUSA.png" alt="Sagicor">
-      Sagicor
-    </a>
-
-    <a class="app-icon" href="https://advisor.securian.com/userservices/public/idg/login" target="_blank">
-      <img src="https://assetlibrary.securian.com/content/dam/securian/web-assets/brand/sf-logo-rgb-bk-wordmark.svg" alt="Securian / Minnesota">
-      Securian / Minnesota
-    </a>
-
-    <a class="app-icon" href="https://sso.symetra.com/nidp/app/login?id=commonlogin&sid=0&option=credential&sid=0" target="_blank">
-      <img src="https://sso.symetra.com/nidp/custom_images/navlogo.svg" alt="Symetra">
-      Symetra
-    </a>
-
-    <a class="app-icon" href="https://secure.transamerica.com/login/sign-in/login.html" target="_blank">
-      <img src="https://secure.transamerica.com/login/assets/images/ta-logo_primary_medium%201.jpg" alt="TransAmerica">
-      TransAmerica
-    </a>
-
-    <a class="app-icon" href="https://login.zurichna.com/app/global_redirect/0oa16bc8jjxFu2t26358/login" target="_blank">
-      <img src="https://ok7static.oktacdn.com/fs/bco/1/fs0tffzjnboXj8QXk357" alt="TransAmerica">
-      Zurich
-    </a>
-    
+  <div class="toolbar">
+    <button id="toggleEdit">Enable Edit Mode</button>
+    <button id="addGroupBtn" class="secondary">+ Add Group</button>
   </div>
 
+  <div id="groups" class="groups"><!-- render here --></div>
+
+  <!-- Templates -->
+  <template id="groupTemplate">
+    <section class="group" data-group-id="">
+      <div class="group-header">
+        <div class="group-title">
+          <span class="caret" aria-hidden="true"></span>
+          <span class="title-text"></span>
+        </div>
+        <div class="group-actions">
+          <button class="collapse">Collapse</button>
+          <button class="rename">Rename</button>
+          <button class="delete danger">Delete</button>
+        </div>
+      </div>
+      <div class="app-grid" data-dropzone></div>
+    </section>
+  </template>
+
+  <template id="appTemplate">
+    <a class="app-icon" href="#" target="_blank" draggable="false" data-app-id="" tabindex="0" aria-label="">
+      <span class="remove-btn" title="Remove from this group">✕</span>
+      <span class="edit-badge">drag</span>
+      <img src="" alt="">
+      <span class="label"></span>
+    </a>
+  </template>
+
+  <!-- Catalog -->
+  <script>
+    const CATALOG = [
+      { id:"ameritas", label:"Ameritas", href:"https://service.ameritas.com/service/login.asp", img:"https://webcontent.ameritas.com/idc/groups/public/documents/image/ameritas_bison_color200x51.png" },
+      { id:"american-national", label:"American National", href:"https://lad.americannational.com/", img:"https://lad.americannational.com/content/dam/lad/an-logos/AN_Logo_Stacked_2color.svg" },
+      { id:"corebridge", label:"Corebridge", href:"https://www.connext.corebridgefinancial.com/life/connext-security/public/login", img:"https://binaries.corebridgefinancial.com/content/dam/acs/america-canada/us_lifeconnext-portal/en/images/corebridge_financial.png" },
+      { id:"fg", label:"Fidelity & Guaranty", href:"https://saleslink.fglife.com/login/portallogin", img:"https://www.fglife.com/images/F&G_Logo.svg" },
+      { id:"foresters", label:"Foresters Financial", href:"https://ezbiz.foresters.com/", img:"https://ezbiz.foresters.com/-/media/ezbiz/images/logos/ezbiz-logo.svg?la=en&hash=2BCA42891AE3D018D9B11D2D689B872E" },
+      { id:"global-atlantic", label:"Global Atlantic", href:"https://www.globalatlanticlink.com/AgentWeb/", img:"https://www.globalatlanticlink.com/AgentWeb/javax.faces.resource/Rebranding_GAFG_white_logo.png.jsf?ln=images" },
+      { id:"john-hancock", label:"John Hancock", href:"https://partnerlink.jhancock.com/", img:"https://www.johnhancock.com/content/dam/onejohnhancock/images/homepage/JohnHancock_rgb.svg" },
+      { id:"lincoln", label:"Lincoln Financial", href:"https://auth.lincolnfinancial.com/login", img:"https://idm.web.lfg.com/idm-login/assets/images/lfg-logo.svg" },
+      { id:"mutual-of-omaha", label:"Mutual of Omaha", href:"https://accounts.mutualofomaha.com/", img:"https://cdn.mutualofomaha.com/images/corporate/pixel.png" },
+      { id:"national-life", label:"National Life Group", href:"https://www.nationallife.com/", img:"https://www.nationallife.com/-/media/Images/NationalLife/public/home-page/home-feature/NLG-logo.jpeg" },
+      { id:"nationwide", label:"Nationwide", href:"https://nationwidefinancial.com/", img:"https://nationwidefinancial.com/media/images/ssc/header-logo.svg" },
+      { id:"new-york-life", label:"New York Life", href:"https://www.newyorklife.com/amn/retail-life/secure", img:"https://assets.newyorklife.com/is/content/newyorklife/nyl-logo-1" },
+      { id:"north-america", label:"North America", href:"https://www.northamericancompany.com/", img:"https://www.northamericancompany.com/image/layout_set_logo?img_id=1417326116&t=1754683708494" },
+      { id:"oneamerica", label:"OneAmerica", href:"https://login.oneamerica.com/login", img:"https://www.oneamerica.com/content/dam/connectedassets/design-elements/logosgraphicsicons/OneAmerica_r_rgb.svg" },
+      { id:"principal", label:"Principal", href:"https://www.advisors.principal.com", img:"https://www.oneamerica.com/content/dam/connectedassets/design-elements/logosgraphicsicons/OneAmerica_r_rgb.svg" },
+      { id:"protective", label:"Protective", href:"https://www.myprotective.com", img:"https://apps.cdn.protective.com/b2c/AzureBlue/bannerlogo.png" },
+      { id:"prudential", label:"Prudential", href:"https://ssoauth.prudential.com/app/pxblife/login?ou=PXB&client_id=pxb-life-public-app&goto=https://prudentialexpresslife.prudential.com/home", img:"https://ssoauth.prudential.com/static/media/PruXpress_Logo.30c438e667ca95d3c049.png" },
+      { id:"sagicor", label:"Sagicor", href:"https://client.sagicor.com/#/login", img:"https://client.sagicor.com/assets/images/logoLoginUSA.png" },
+      { id:"securian", label:"Securian / Minnesota", href:"https://advisor.securian.com/userservices/public/idg/login", img:"https://assetlibrary.securian.com/content/dam/securian/web-assets/brand/sf-logo-rgb-bk-wordmark.svg" },
+      { id:"symetra", label:"Symetra", href:"https://sso.symetra.com/nidp/app/login?id=commonlogin&sid=0&option=credential&sid=0", img:"https://sso.symetra.com/nidp/custom_images/navlogo.svg" },
+      { id:"transamerica", label:"TransAmerica", href:"https://secure.transamerica.com/login/sign-in/login.html", img:"https://secure.transamerica.com/login/assets/images/ta-logo_primary_medium%201.jpg" },
+      { id:"zurich", label:"Zurich", href:"https://login.zurichna.com/app/global_redirect/0oa16bc8jjxFu2t26358/login", img:"https://ok7static.oktacdn.com/fs/bco/1/fs0tffzjnboXj8QXk357" },
+    ];
+  </script>
+
+  <script>
+    // === Config ===
+    const params = new URLSearchParams(location.search);
+    const CURRENT_USER = params.get('user') || 'default';
+    const ALL_APPS_NAME = 'All Apps';
+    const LS_KEY = (u)=>`portalState:${u}`;
+
+
+    let state = null; // does NOT include the virtual All Apps group
+
+    const groupsEl = document.getElementById('groups');
+    const groupTpl = document.getElementById('groupTemplate');
+    const appTpl = document.getElementById('appTemplate');
+
+    // ===== LocalStorage helpers for All Apps collapsed state =====
+    function getAllAppsCollapsedKey() { return `${LS_KEY(CURRENT_USER)}:allappsCollapsed`; }
+    function getAllAppsCollapsed() { return JSON.parse(localStorage.getItem(getAllAppsCollapsedKey()) || 'false'); }
+    function setAllAppsCollapsed(val) { localStorage.setItem(getAllAppsCollapsedKey(), JSON.stringify(!!val)); }
+
+    // ===== Persistence (localStorage only) =====
+    async function loadState() {
+      const raw = localStorage.getItem(LS_KEY(CURRENT_USER));
+      if (raw) return JSON.parse(raw);
+      return { groups: [] }; // default: All Apps is virtual; no custom groups
+    }
+    async function saveState() { localStorage.setItem(LS_KEY(CURRENT_USER), JSON.stringify(state)); }
+
+    // ===== Public helper (optional) =====
+    window.removeAppFromGroup = function(groupId, appId){
+      const g = state.groups.find(x=>x.id===groupId);
+      if (!g) return false;
+      const idx = g.appIds.indexOf(appId);
+      if (idx >= 0) {
+        g.appIds.splice(idx, 1);
+        saveState(); render();
+        return true;
+      }
+      return false;
+    };
+
+    // ===== Rendering =====
+    function render() {
+      groupsEl.innerHTML = '';
+
+      // All Apps (virtual, locked)
+      const allAppsSection = buildGroupSection(
+        { id: '__all__', name: ALL_APPS_NAME, appIds: CATALOG.map(a=>a.id), collapsed: getAllAppsCollapsed() },
+        { locked:true, virtualAll:true }
+      );
+      groupsEl.appendChild(allAppsSection);
+
+      // Custom groups (in saved order)
+      state.groups.forEach((g)=>{
+        const sec = buildGroupSection(g, { locked:false, virtualAll:false });
+        groupsEl.appendChild(sec);
+      });
+
+      refreshEditability();
+    }
+
+    function buildGroupSection(group, {locked, virtualAll}) {
+      const node = groupTpl.content.cloneNode(true);
+      const sec = node.querySelector('.group');
+      const header = node.querySelector('.group-header');
+      const titleEl = node.querySelector('.title-text');
+      const grid = node.querySelector('.app-grid');
+      const collapseBtn = node.querySelector('.collapse');
+      const renameBtn = node.querySelector('.rename');
+      const deleteBtn = node.querySelector('.delete');
+
+      sec.dataset.groupId = group.id;
+      titleEl.textContent = group.name;
+
+      // Collapsed state
+      const isCollapsed = virtualAll ? getAllAppsCollapsed() : !!group.collapsed;
+      if (isCollapsed) sec.classList.add('collapsed');
+      collapseBtn.textContent = isCollapsed ? 'Expand' : 'Collapse';
+
+      // Lock All Apps
+      if (locked) { renameBtn.style.display = 'none'; deleteBtn.style.display = 'none'; }
+
+      // Collapse/expand
+      collapseBtn.addEventListener('click', ()=>{
+        const current = virtualAll ? getAllAppsCollapsed() : !!group.collapsed;
+        setCollapsed(group.id, !current, virtualAll);
+      });
+      header.addEventListener('click', (e)=>{
+        if (e.target.closest('button')) return;
+        const current = virtualAll ? getAllAppsCollapsed() : !!group.collapsed;
+        setCollapsed(group.id, !current, virtualAll);
+      });
+
+      // Rename/Delete
+      renameBtn.addEventListener('click', ()=>{
+        if (locked) return;
+        const newName = prompt('Group name:', group.name);
+        if (!newName) return;
+        group.name = newName.trim();
+        saveState(); render();
+      });
+      deleteBtn.addEventListener('click', ()=>{
+        if (locked) return;
+        if (!confirm(`Delete group "${group.name}"?`)) return;
+        state.groups = state.groups.filter(x=>x.id!==group.id);
+        saveState(); render();
+      });
+
+      // ==== APP DRAG (assign to custom groups) ====
+      if (!virtualAll) {
+        grid.addEventListener('dragover', (e)=>{
+          if (!document.body.classList.contains('editing')) return;
+          e.preventDefault();
+          grid.classList.add('drop-target');
+        });
+        grid.addEventListener('dragleave', ()=>grid.classList.remove('drop-target'));
+        grid.addEventListener('drop', (e)=>{
+          grid.classList.remove('drop-target');
+          const appId = e.dataTransfer.getData('text/app-id');
+          if (!appId) return;
+          assignAppToGroup(appId, group.id);
+        });
+      } else {
+        grid.style.borderStyle = 'solid';
+        grid.style.borderColor = 'transparent';
+      }
+
+      // Populate apps
+      const byId = Object.fromEntries(CATALOG.map(a=>[a.id,a]));
+      group.appIds.forEach(id=>{
+        const app = byId[id];
+        if (!app) return;
+        const aNode = appTpl.content.cloneNode(true);
+        const a = aNode.querySelector('.app-icon');
+        const removeBtn = aNode.querySelector('.remove-btn');
+
+        a.href = app.href;
+        a.dataset.appId = app.id;
+        a.ariaLabel = app.label;
+        a.querySelector('img').src = app.img;
+        a.querySelector('img').alt = app.label;
+        a.querySelector('.label').textContent = app.label;
+
+        // Visible remove only on custom groups while editing
+        if (!virtualAll) removeBtn.classList.add('show'); else removeBtn.classList.remove('show');
+
+        // Click/remove (don’t navigate)
+        removeBtn.addEventListener('click', (e)=>{
+          e.preventDefault(); e.stopPropagation();
+          removeAppFromGroup(group.id, app.id);
+        });
+
+        // Keyboard remove (Delete/Backspace)
+        a.addEventListener('keydown', (e)=>{
+          if (!document.body.classList.contains('editing')) return;
+          if (virtualAll) return; // not removable from All Apps
+          if (e.key === 'Delete' || e.key === 'Backspace') {
+            e.preventDefault();
+            removeAppFromGroup(group.id, app.id);
+          }
+        });
+
+        // Drag start
+        a.addEventListener('dragstart', (e)=>{
+          if (!document.body.classList.contains('editing')) { e.preventDefault(); return; }
+          e.dataTransfer.setData('text/app-id', app.id);
+          a.classList.add('dragging-app');
+        });
+        a.addEventListener('dragend', ()=>a.classList.remove('dragging-app'));
+        a.setAttribute('draggable', String(document.body.classList.contains('editing')));
+
+        grid.appendChild(aNode);
+      });
+
+      return node;
+    }
+
+    function setCollapsed(groupId, collapsed, virtualAll) {
+      if (virtualAll) {
+        setAllAppsCollapsed(collapsed);
+      } else {
+        const g = state.groups.find(x=>x.id===groupId);
+        if (g) g.collapsed = !!collapsed;
+        saveState();
+      }
+      render();
+    }
+
+    function refreshEditability() {
+      document.querySelectorAll('.app-icon').forEach(el=>{
+        el.setAttribute('draggable', String(document.body.classList.contains('editing')));
+      });
+      document.querySelectorAll('.group').forEach(el=>{
+        if (document.body.classList.contains('editing')) el.classList.add('editing');
+        else el.classList.remove('editing');
+      });
+
+      // Ensure All Apps reflects persisted collapsed state after render
+      const all = document.querySelector('[data-group-id="__all__"]');
+      if (all) {
+        const collapsed = getAllAppsCollapsed();
+        if (collapsed) all.classList.add('collapsed'); else all.classList.remove('collapsed');
+        const btn = all.querySelector('.collapse');
+        if (btn) btn.textContent = collapsed ? 'Expand' : 'Collapse';
+      }
+    }
+
+    // ===== Assignment logic =====
+    function assignAppToGroup(appId, targetGroupId) {
+      const g = state.groups.find(x=>x.id===targetGroupId);
+      if (!g) return;
+      if (!g.appIds.includes(appId)) g.appIds.push(appId);
+      saveState(); render();
+    }
+
+    // Controls
+    document.getElementById('toggleEdit').addEventListener('click', ()=>{
+      const btn = document.getElementById('toggleEdit');
+      const editing = document.body.classList.toggle('editing');
+      btn.textContent = editing ? 'Disable Edit Mode' : 'Enable Edit Mode';
+      refreshEditability();
+    });
+
+    document.getElementById('addGroupBtn').addEventListener('click', ()=>{
+      const name = prompt('New group name:', 'New Group');
+      if (!name) return;
+      // Insert NEW group at the TOP (right under All Apps)
+      state.groups.unshift({ id: crypto.randomUUID(), name: name.trim(), appIds: [], collapsed:false });
+      saveState(); render();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    // Init
+    (async function init(){
+      state = await loadState();
+      render();
+    })();
+  </script>
 </body>
 </html>
