@@ -8,10 +8,8 @@
     :root { --gap: 18px; --card-w: 120px; --radius: 12px; }
 
     body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 24px; margin: 0; }
-
     header { text-align: center; margin-bottom: 14px; }
     h1 { font-size: 1.8em; margin: 0 0 6px; }
-    .subhead { color:#666; margin: 0; font-size:14px; }
 
     .toolbar { display:flex; gap:10px; justify-content:center; align-items:center; margin: 18px 0; }
     .toolbar button {
@@ -20,7 +18,6 @@
     }
     .toolbar button.secondary { background:#fff; color:#111; border:1px solid #ddd; }
 
-    /* Full-width groups stacked vertically */
     .groups { display: flex; flex-direction: column; gap: 10px; align-items: stretch; width: 100%; }
     .group {
       background:#fff; border-radius: 16px; padding: 12px 12px 16px;
@@ -49,7 +46,7 @@
       display: flex; flex-wrap: wrap; gap: var(--gap);
       min-height: calc(var(--card-w) + 16px);
       padding: 10px; border: 1px dashed transparent; border-radius: 14px;
-      transition: border-color .15s ease, max-height .2s ease;
+      transition: border-color .15s ease, max-height .2s ease, background-color .15s ease;
       overflow: hidden; justify-content: flex-start;
     }
     .drop-target { border-color: #9ec5ff; background: #f7fbff; }
@@ -82,13 +79,44 @@
     .editing .app-icon { cursor: grab; }
     .dragging-app { opacity: .6; transform: scale(.98) !important; }
 
-    /* Remove (unassign) chip shown only in edit mode on custom groups */
     .remove-btn {
       position:absolute; top:6px; left:6px; font-size:11px; line-height:1;
       padding:4px 6px; border-radius:999px; background:#ffe8e8; color:#b00020;
       border:1px solid #f6caca; display:none; cursor:pointer; user-select:none;
     }
     .editing .app-icon .remove-btn.show { display:inline-block; }
+
+    /* ===== Subcategories inside All Apps ===== */
+    .subcategory {
+      border: 1px solid #eee;
+      border-radius: 12px;
+      margin: 10px 0;
+      overflow: hidden;
+    }
+    .subcategory-header {
+      display:flex; align-items:center; justify-content: space-between;
+      padding: 10px 12px; background:#fafafa; cursor:pointer; user-select:none;
+      border-bottom: 1px solid #eee;
+    }
+    .subcategory-header .title {
+      display:flex; align-items:center; gap:8px; font-weight:600;
+    }
+    .subcategory .sub-caret {
+      display:inline-block; width: 0; height: 0;
+      border-left: 6px solid transparent; border-right: 6px solid transparent;
+      border-top: 8px solid #333; transition: transform .15s ease;
+    }
+    .subcategory.collapsed .sub-caret { transform: rotate(-90deg); }
+    .subcategory .count { color:#666; font-size:12px; }
+    .subcategory-grid {
+      display:flex; flex-wrap: wrap; gap: var(--gap);
+      padding: 10px;
+      transition: max-height .2s ease, padding .2s ease;
+      overflow: hidden;
+    }
+    .subcategory.collapsed .subcategory-grid {
+      max-height: 0; padding-top: 0; padding-bottom: 0;
+    }
   </style>
 </head>
 <body>
@@ -165,6 +193,23 @@
     const ALL_APPS_NAME = 'All Apps';
     const LS_KEY = (u)=>`portalState:${u}`;
 
+    // Subcategories for All Apps
+    const ALL_APPS_SUBCATS = [
+      { key: 'life_bga', label: 'Life Insurance (BGA)' },
+      { key: 'annuity', label: 'Annuity' },
+      { key: 'pnc', label: 'Property and Casualty' },
+      { key: 'benefits', label: 'Benefits' },
+    ];
+
+    // Demo: ~5 apps per subcategory
+    const DEMO_ALLOCATION = {
+      life_bga:    ["john-hancock","lincoln","protective","prudential","transamerica"],
+      annuity:     ["fg","global-atlantic","north-america","symetra","oneamerica"],
+      pnc:         ["nationwide","zurich","american-national","mutual-of-omaha","principal"],
+      benefits:    ["ameritas","foresters","corebridge","national-life","new-york-life"],
+    };
+
+    const BY_ID = Object.fromEntries(CATALOG.map(a => [a.id, a]));
 
     let state = null; // does NOT include the virtual All Apps group
 
@@ -172,20 +217,24 @@
     const groupTpl = document.getElementById('groupTemplate');
     const appTpl = document.getElementById('appTemplate');
 
-    // ===== LocalStorage helpers for All Apps collapsed state =====
-    function getAllAppsCollapsedKey() { return `${LS_KEY(CURRENT_USER)}:allappsCollapsed`; }
-    function getAllAppsCollapsed() { return JSON.parse(localStorage.getItem(getAllAppsCollapsedKey()) || 'false'); }
-    function setAllAppsCollapsed(val) { localStorage.setItem(getAllAppsCollapsedKey(), JSON.stringify(!!val)); }
+    // ===== LocalStorage helpers =====
+    const allAppsCollapsedKey = () => `${LS_KEY(CURRENT_USER)}:allappsCollapsed`;
+    const getAllAppsCollapsed = () => JSON.parse(localStorage.getItem(allAppsCollapsedKey()) || 'false');
+    const setAllAppsCollapsed = (val) => localStorage.setItem(allAppsCollapsedKey(), JSON.stringify(!!val));
 
-    // ===== Persistence (localStorage only) =====
+    const allAppsSubcatKey = (subKey) => `${LS_KEY(CURRENT_USER)}:allappsSubcat:${subKey}:collapsed`;
+    const getSubcatCollapsed = (subKey) => JSON.parse(localStorage.getItem(allAppsSubcatKey(subKey)) || 'false');
+    const setSubcatCollapsed = (subKey, val) => localStorage.setItem(allAppsSubcatKey(subKey), JSON.stringify(!!val));
+
+    // ===== Persistence =====
     async function loadState() {
       const raw = localStorage.getItem(LS_KEY(CURRENT_USER));
       if (raw) return JSON.parse(raw);
-      return { groups: [] }; // default: All Apps is virtual; no custom groups
+      return { groups: [] };
     }
     async function saveState() { localStorage.setItem(LS_KEY(CURRENT_USER), JSON.stringify(state)); }
 
-    // ===== Public helper (optional) =====
+    // Public helper
     window.removeAppFromGroup = function(groupId, appId){
       const g = state.groups.find(x=>x.id===groupId);
       if (!g) return false;
@@ -209,7 +258,7 @@
       );
       groupsEl.appendChild(allAppsSection);
 
-      // Custom groups (in saved order)
+      // Custom groups
       state.groups.forEach((g)=>{
         const sec = buildGroupSection(g, { locked:false, virtualAll:false });
         groupsEl.appendChild(sec);
@@ -239,7 +288,7 @@
       // Lock All Apps
       if (locked) { renameBtn.style.display = 'none'; deleteBtn.style.display = 'none'; }
 
-      // Collapse/expand
+      // Collapse/expand handlers
       collapseBtn.addEventListener('click', ()=>{
         const current = virtualAll ? getAllAppsCollapsed() : !!group.collapsed;
         setCollapsed(group.id, !current, virtualAll);
@@ -265,73 +314,144 @@
         saveState(); render();
       });
 
-      // ==== APP DRAG (assign to custom groups) ====
-      if (!virtualAll) {
-        grid.addEventListener('dragover', (e)=>{
-          if (!document.body.classList.contains('editing')) return;
-          e.preventDefault();
-          grid.classList.add('drop-target');
-        });
-        grid.addEventListener('dragleave', ()=>grid.classList.remove('drop-target'));
-        grid.addEventListener('drop', (e)=>{
-          grid.classList.remove('drop-target');
-          const appId = e.dataTransfer.getData('text/app-id');
-          if (!appId) return;
-          assignAppToGroup(appId, group.id);
-        });
-      } else {
+      if (virtualAll) {
+        // All Apps: show subcategories; cards are draggable out, not removable here
         grid.style.borderStyle = 'solid';
         grid.style.borderColor = 'transparent';
+        grid.innerHTML = '';
+
+        const container = document.createElement('div');
+        container.setAttribute('aria-label','All Apps Categories');
+
+        ALL_APPS_SUBCATS.forEach(sub => {
+          const appIds = (DEMO_ALLOCATION[sub.key] || []).filter(id => BY_ID[id]);
+          const subEl = buildSubcategory(sub.label, sub.key, appIds);
+          container.appendChild(subEl);
+        });
+
+        grid.appendChild(container);
+      } else {
+        // Custom groups are valid drop targets + show their apps
+        enableDropTarget(grid, group.id);
+
+        group.appIds.forEach(id=>{
+          const app = BY_ID[id];
+          if (!app) return;
+          grid.appendChild(buildAppCard(app, { removable:true, groupId: group.id, fromAll:false }));
+        });
       }
 
-      // Populate apps
-      const byId = Object.fromEntries(CATALOG.map(a=>[a.id,a]));
-      group.appIds.forEach(id=>{
-        const app = byId[id];
+      return node;
+    }
+
+    function buildSubcategory(title, key, appIds) {
+      const wrap = document.createElement('div');
+      wrap.className = 'subcategory';
+      if (getSubcatCollapsed(key)) wrap.classList.add('collapsed');
+
+      const head = document.createElement('div');
+      head.className = 'subcategory-header';
+      const left = document.createElement('div');
+      left.className = 'title';
+      const caret = document.createElement('span');
+      caret.className = 'sub-caret';
+      const label = document.createElement('span');
+      label.textContent = title;
+      left.appendChild(caret);
+      left.appendChild(label);
+
+      const right = document.createElement('div');
+      right.className = 'count';
+      right.textContent = `${appIds.length} apps`;
+
+      head.appendChild(left);
+      head.appendChild(right);
+      wrap.appendChild(head);
+
+      const grid = document.createElement('div');
+      grid.className = 'subcategory-grid';
+
+      // All Apps: draggable out, not removable here
+      appIds.forEach(id => {
+        const app = BY_ID[id];
         if (!app) return;
-        const aNode = appTpl.content.cloneNode(true);
-        const a = aNode.querySelector('.app-icon');
-        const removeBtn = aNode.querySelector('.remove-btn');
-
-        a.href = app.href;
-        a.dataset.appId = app.id;
-        a.ariaLabel = app.label;
-        a.querySelector('img').src = app.img;
-        a.querySelector('img').alt = app.label;
-        a.querySelector('.label').textContent = app.label;
-
-        // Visible remove only on custom groups while editing
-        if (!virtualAll) removeBtn.classList.add('show'); else removeBtn.classList.remove('show');
-
-        // Click/remove (don’t navigate)
-        removeBtn.addEventListener('click', (e)=>{
-          e.preventDefault(); e.stopPropagation();
-          removeAppFromGroup(group.id, app.id);
-        });
-
-        // Keyboard remove (Delete/Backspace)
-        a.addEventListener('keydown', (e)=>{
-          if (!document.body.classList.contains('editing')) return;
-          if (virtualAll) return; // not removable from All Apps
-          if (e.key === 'Delete' || e.key === 'Backspace') {
-            e.preventDefault();
-            removeAppFromGroup(group.id, app.id);
-          }
-        });
-
-        // Drag start
-        a.addEventListener('dragstart', (e)=>{
-          if (!document.body.classList.contains('editing')) { e.preventDefault(); return; }
-          e.dataTransfer.setData('text/app-id', app.id);
-          a.classList.add('dragging-app');
-        });
-        a.addEventListener('dragend', ()=>a.classList.remove('dragging-app'));
-        a.setAttribute('draggable', String(document.body.classList.contains('editing')));
-
-        grid.appendChild(aNode);
+        grid.appendChild(buildAppCard(app, { removable:false, groupId:null, fromAll:true }));
       });
 
-      return node;
+      head.addEventListener('click', ()=>{
+        const collapsed = !wrap.classList.contains('collapsed');
+        setSubcatCollapsed(key, collapsed);
+        wrap.classList.toggle('collapsed', collapsed);
+      });
+
+      wrap.appendChild(grid);
+      return wrap;
+    }
+
+    function buildAppCard(app, { removable=false, groupId=null, fromAll=false } = {}) {
+      const aNode = appTpl.content.cloneNode(true);
+      const a = aNode.querySelector('.app-icon');
+      const removeBtn = aNode.querySelector('.remove-btn');
+      const img = aNode.querySelector('img');
+
+      a.href = app.href;
+      a.dataset.appId = app.id;
+      a.ariaLabel = app.label;
+      img.src = app.img;
+      img.alt = app.label;
+      a.querySelector('.label').textContent = app.label;
+
+      // Remove control only for custom groups
+      if (removable) {
+        removeBtn.classList.add('show');
+        removeBtn.addEventListener('click', (e)=>{
+          e.preventDefault(); e.stopPropagation();
+          if (!groupId) return;
+          removeAppFromGroup(groupId, app.id);
+        });
+        a.addEventListener('keydown', (e)=>{
+          if (!document.body.classList.contains('editing')) return;
+          if (e.key === 'Delete' || e.key === 'Backspace') {
+            e.preventDefault();
+            if (groupId) removeAppFromGroup(groupId, app.id);
+          }
+        });
+      } else {
+        removeBtn.classList.remove('show');
+      }
+
+      // Drag behavior (dragging allowed in Edit Mode everywhere)
+      a.addEventListener('dragstart', (e)=>{
+        if (!document.body.classList.contains('editing')) { e.preventDefault(); return; }
+        // Put payload in both custom and plain mimetypes
+        e.dataTransfer.setData('text/app-id', app.id);
+        e.dataTransfer.setData('text/plain', app.id);
+        a.classList.add('dragging-app');
+      });
+      a.addEventListener('dragend', ()=>a.classList.remove('dragging-app'));
+
+      // Make it reflect current mode
+      a.setAttribute('draggable', String(document.body.classList.contains('editing')));
+
+      return aNode;
+    }
+
+    // Enable a grid as drop target for assigning to a specific group
+    function enableDropTarget(gridEl, targetGroupId) {
+      gridEl.addEventListener('dragover', (e)=>{
+        if (!document.body.classList.contains('editing')) return;
+        e.preventDefault(); // allow drop
+        gridEl.classList.add('drop-target');
+      });
+      gridEl.addEventListener('dragleave', ()=>gridEl.classList.remove('drop-target'));
+      gridEl.addEventListener('drop', (e)=>{
+        if (!document.body.classList.contains('editing')) return;
+        e.preventDefault();
+        gridEl.classList.remove('drop-target');
+        const appId = e.dataTransfer.getData('text/app-id') || e.dataTransfer.getData('text/plain');
+        if (!appId) return;
+        assignAppToGroup(appId, targetGroupId);
+      });
     }
 
     function setCollapsed(groupId, collapsed, virtualAll) {
@@ -350,21 +470,32 @@
         el.setAttribute('draggable', String(document.body.classList.contains('editing')));
       });
       document.querySelectorAll('.group').forEach(el=>{
-        if (document.body.classList.contains('editing')) el.classList.add('editing');
-        else el.classList.remove('editing');
+        el.classList.toggle('editing', document.body.classList.contains('editing'));
       });
 
       // Ensure All Apps reflects persisted collapsed state after render
       const all = document.querySelector('[data-group-id="__all__"]');
       if (all) {
         const collapsed = getAllAppsCollapsed();
-        if (collapsed) all.classList.add('collapsed'); else all.classList.remove('collapsed');
+        all.classList.toggle('collapsed', collapsed);
         const btn = all.querySelector('.collapse');
         if (btn) btn.textContent = collapsed ? 'Expand' : 'Collapse';
       }
+
+      // Rebind drop zones for custom groups (in case of re-render)
+      document.querySelectorAll('.group').forEach(groupEl=>{
+        const id = groupEl.getAttribute('data-group-id');
+        if (id && id !== '__all__') {
+          const grid = groupEl.querySelector('.app-grid');
+          // Remove old listeners by cloning (cleaner than tracking refs)
+          const fresh = grid.cloneNode(true);
+          grid.parentNode.replaceChild(fresh, grid);
+          enableDropTarget(fresh, id);
+        }
+      });
     }
 
-    // ===== Assignment logic =====
+    // Assignment: add to group if not present
     function assignAppToGroup(appId, targetGroupId) {
       const g = state.groups.find(x=>x.id===targetGroupId);
       if (!g) return;
